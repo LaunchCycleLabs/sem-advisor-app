@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 from google.ads.googleads.client import GoogleAdsClient
 
-def fetch_campaign_data(customer_id: str) -> pd.DataFrame:
-    """Fetch basic campaign metrics for a given customer ID."""
+def fetch_campaign_data(customer_id: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """Fetch basic campaign metrics for a given customer ID within a date range."""
     config = {
         "developer_token": st.secrets["google_ads"]["developer_token"],
         "client_id": st.secrets["google_ads"]["client_id"],
@@ -14,7 +14,7 @@ def fetch_campaign_data(customer_id: str) -> pd.DataFrame:
     }
     client = GoogleAdsClient.load_from_dict(config)
     ga_service = client.get_service("GoogleAdsService")
-    query = """
+    query = f"""
       SELECT
         campaign.id,
         campaign.name,
@@ -24,6 +24,7 @@ def fetch_campaign_data(customer_id: str) -> pd.DataFrame:
         metrics.cost_micros
       FROM campaign
       WHERE campaign.status != 'REMOVED'
+      AND segments.date BETWEEN '{start_date}' AND '{end_date}'
     """
     response = ga_service.search(customer_id=customer_id, query=query)
     rows = []
@@ -40,8 +41,8 @@ def fetch_campaign_data(customer_id: str) -> pd.DataFrame:
         })
     return pd.DataFrame(rows)
 
-def fetch_keyword_data(customer_id: str) -> pd.DataFrame:
-    """Fetch keyword-level metrics for a given customer ID."""
+def fetch_keyword_data(customer_id: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """Fetch keyword-level metrics for a given customer ID within a date range."""
     config = {
         "developer_token": st.secrets["google_ads"]["developer_token"],
         "client_id": st.secrets["google_ads"]["client_id"],
@@ -52,7 +53,7 @@ def fetch_keyword_data(customer_id: str) -> pd.DataFrame:
     }
     client = GoogleAdsClient.load_from_dict(config)
     ga_service = client.get_service("GoogleAdsService")
-    query = """
+    query = f"""
       SELECT
         campaign.id,
         campaign.name,
@@ -64,6 +65,7 @@ def fetch_keyword_data(customer_id: str) -> pd.DataFrame:
         metrics.cost_micros
       FROM keyword_view
       WHERE metrics.impressions > 0
+      AND segments.date BETWEEN '{start_date}' AND '{end_date}'
     """
     response = ga_service.search(customer_id=customer_id, query=query)
     rows = []
