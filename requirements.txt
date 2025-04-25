@@ -1,0 +1,5 @@
+streamlit
+google-ads
+google-auth-oauthlib
+pandas
+PyYAML
