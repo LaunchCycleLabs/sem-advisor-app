@@ -1,10 +1,18 @@
-import argparse
+import streamlit as st
 import pandas as pd
 from google.ads.googleads.client import GoogleAdsClient
 
 def fetch_campaign_data(customer_id: str) -> pd.DataFrame:
     """Fetch basic campaign metrics for a given customer ID."""
-    client    = GoogleAdsClient.load_from_storage("google-ads.yaml")
+    config = {
+        "developer_token": st.secrets["google_ads"]["developer_token"],
+        "client_id": st.secrets["google_ads"]["client_id"],
+        "client_secret": st.secrets["google_ads"]["client_secret"],
+        "refresh_token": st.secrets["google_ads"]["refresh_token"],
+        "login_customer_id": st.secrets["google_ads"]["login_customer_id"],
+        "use_proto_plus": st.secrets["google_ads"]["use_proto_plus"]
+    }
+    client = GoogleAdsClient.load_from_dict(config)
     ga_service = client.get_service("GoogleAdsService")
     query = """
       SELECT
@@ -23,18 +31,26 @@ def fetch_campaign_data(customer_id: str) -> pd.DataFrame:
         c = row.campaign
         m = row.metrics
         rows.append({
-            "campaign_id":   c.id,
+            "campaign_id": c.id,
             "campaign_name": c.name,
-            "impressions":   m.impressions,
-            "clicks":        m.clicks,
-            "conversions":   m.conversions,
-            "cost":          m.cost_micros / 1e6,  # convert micros to currency
+            "impressions": m.impressions,
+            "clicks": m.clicks,
+            "conversions": m.conversions,
+            "cost": m.cost_micros / 1e6,  # convert micros to currency
         })
     return pd.DataFrame(rows)
 
 def fetch_keyword_data(customer_id: str) -> pd.DataFrame:
     """Fetch keyword-level metrics for a given customer ID."""
-    client    = GoogleAdsClient.load_from_storage("google-ads.yaml")
+    config = {
+        "developer_token": st.secrets["google_ads"]["developer_token"],
+        "client_id": st.secrets["google_ads"]["client_id"],
+        "client_secret": st.secrets["google_ads"]["client_secret"],
+        "refresh_token": st.secrets["google_ads"]["refresh_token"],
+        "login_customer_id": st.secrets["google_ads"]["login_customer_id"],
+        "use_proto_plus": st.secrets["google_ads"]["use_proto_plus"]
+    }
+    client = GoogleAdsClient.load_from_dict(config)
     ga_service = client.get_service("GoogleAdsService")
     query = """
       SELECT
@@ -53,14 +69,14 @@ def fetch_keyword_data(customer_id: str) -> pd.DataFrame:
     rows = []
     for row in response:
         rows.append({
-            "campaign_id":   row.campaign.id,
+            "campaign_id": row.campaign.id,
             "campaign_name": row.campaign.name,
-            "ad_group_id":   row.ad_group.id,
-            "keyword":       row.segments.keyword.text,
-            "impressions":   row.metrics.impressions,
-            "clicks":        row.metrics.clicks,
-            "conversions":   row.metrics.conversions,
-            "cost":          row.metrics.cost_micros / 1e6,
+            "ad_group_id": row.ad_group.id,
+            "keyword": row.segments.keyword.text,
+            "impressions": row.metrics.impressions,
+            "clicks": row.metrics.clicks,
+            "conversions": row.metrics.conversions,
+            "cost": row.metrics.cost_micros / 1e6,
         })
     return pd.DataFrame(rows)
 
@@ -101,23 +117,3 @@ def generate_recommendations(camp_df: pd.DataFrame, kw_df: pd.DataFrame) -> list
         recs.append(f"  • {r.campaign_name}: {r.conversions} conv, ${r.cost:.2f} spent")
 
     return recs
-
-def main():
-    parser = argparse.ArgumentParser(description="SEM Strategy Advisor Agent")
-    parser.add_argument(
-        "--customer-id", required=True,
-        help="10-digit Google Ads customer ID (no dashes)"
-    )
-    args = parser.parse_args()
-
-    print(f"\n🔍 Fetching data for customer {args.customer_id}...\n")
-    camp_df = fetch_campaign_data(args.customer_id)
-    kw_df   = fetch_keyword_data(args.customer_id)
-
-    print("💡 Generating recommendations:\n")
-    for rec in generate_recommendations(camp_df, kw_df):
-        print("- " + rec)
-    print()
-
-if __name__ == "__main__":
-    main()
